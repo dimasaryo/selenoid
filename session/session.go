@@ -10,7 +10,7 @@ type Caps struct {
 	Name                  string `json:"browserName"`
 	Version               string `json:"version"`
 	ScreenResolution      string `json:"screenResolution"`
-	VNC                   bool   `json:"enableVNC"`
+	VNC                   string `json:"enableVNC"`
 	TestName              string `json:"name"`
 	TimeZone              string `json:"timeZone"`
 	ContainerHostname     string `json:"containerHostname"`

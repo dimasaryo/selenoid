@@ -6,7 +6,10 @@ import (
 	"log"
 	"net"
 	"net/url"
+	"strconv"
 	"time"
+
+	"strings"
 
 	"github.com/aerokube/selenoid/config"
 	"github.com/aerokube/selenoid/session"
@@ -15,7 +18,6 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	"strings"
 )
 
 const comma = ","
@@ -121,8 +123,9 @@ func getPortConfig(service *config.Browser, caps session.Caps, env Environment) 
 	}
 	exposedPorts := map[nat.Port]struct{}{selenium: {}}
 	var vnc nat.Port
-	if caps.VNC {
-		vnc, err = nat.NewPort("tcp", "5900")
+	enableVNC, err := strconv.ParseBool(caps.VNC)
+	if enableVNC {
+		vnc, err = nat.NewPort("tcp", service.Vnc)
 		if err != nil {
 			return nil, fmt.Errorf("new vnc port: %v", err)
 		}
@@ -131,7 +134,7 @@ func getPortConfig(service *config.Browser, caps session.Caps, env Environment) 
 	portBindings := nat.PortMap{}
 	if env.IP != "" || !env.InDocker {
 		portBindings[selenium] = []nat.PortBinding{{HostIP: "0.0.0.0"}}
-		if caps.VNC {
+		if enableVNC {
 			portBindings[vnc] = []nat.PortBinding{{HostIP: "0.0.0.0"}}
 		}
 	}
@@ -159,7 +162,7 @@ func getEnv(service ServiceBase, caps session.Caps) []string {
 	env := []string{
 		fmt.Sprintf("TZ=%s", getTimeZone(service, caps)),
 		fmt.Sprintf("SCREEN_RESOLUTION=%s", caps.ScreenResolution),
-		fmt.Sprintf("ENABLE_VNC=%v", caps.VNC),
+		fmt.Sprintf("ENABLE_VNC=%s", caps.VNC),
 	}
 	env = append(env, service.Service.Env...)
 	return env
@@ -189,22 +192,23 @@ func getExtraHosts(service *config.Browser, caps session.Caps) []string {
 
 func getHostPort(env Environment, service *config.Browser, caps session.Caps, stat types.ContainerJSON, selenium nat.Port, vnc nat.Port) (string, string) {
 	seleniumHostPort, vncHostPort := "", ""
+	enableVNC, _ := strconv.ParseBool(caps.VNC)
 	if env.IP == "" {
 		if env.InDocker {
 			containerIP := getContainerIP(env.Network, stat)
 			seleniumHostPort = net.JoinHostPort(containerIP, service.Port)
-			if caps.VNC {
-				vncHostPort = net.JoinHostPort(containerIP, "5900")
+			if enableVNC {
+				vncHostPort = net.JoinHostPort(containerIP, service.Vnc)
 			}
 		} else {
 			seleniumHostPort = net.JoinHostPort("127.0.0.1", stat.NetworkSettings.Ports[selenium][0].HostPort)
-			if caps.VNC {
+			if enableVNC {
 				vncHostPort = net.JoinHostPort("127.0.0.1", stat.NetworkSettings.Ports[vnc][0].HostPort)
 			}
 		}
 	} else {
 		seleniumHostPort = net.JoinHostPort(env.IP, stat.NetworkSettings.Ports[selenium][0].HostPort)
-		if caps.VNC {
+		if enableVNC {
 			vncHostPort = net.JoinHostPort(env.IP, stat.NetworkSettings.Ports[vnc][0].HostPort)
 		}
 	}

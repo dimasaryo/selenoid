@@ -9,9 +9,10 @@ import (
 	"strings"
 	"sync"
 
+	"time"
+
 	"github.com/aerokube/selenoid/session"
 	"github.com/docker/docker/api/types/container"
-	"time"
 )
 
 // Session - session id and vnc flaf
@@ -57,6 +58,7 @@ type Browser struct {
 	Env     []string          `json:"env,omitempty"`
 	Hosts   []string          `json:"hosts,omitempty"`
 	ShmSize int64             `json:"shmSize,omitempty"`
+	Vnc     string            `json:"vnc,omitempty"`
 }
 
 // Versions configuration
